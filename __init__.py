@@ -76,8 +76,10 @@ class ClassContainer:
         else:
             class_name : [] = str(cls).replace("<class '", "").replace("'>", "").split('.')
             self.idname = class_name[len(class_name)-1]
+        
+        self.debug = "{}: {}".format(self.idname, self.label)
 
-def _on_value_updated(prop : bpy.types.Property, context):
+def _on_value_updated_redraw(prop : bpy.types.Property, context):
     # user_input:str = self.label_fragment
     # classes = OpGetIdByLabel._get_classes_by_label(user_input)
         # self.report({'ERROR'}, info)
@@ -119,7 +121,7 @@ class OpGetIdByLabel(bpy.types.Operator):
         name="Label fragment",
         description="Part of the label that the search will be matching against",
         subtype='NONE',
-        update=_on_value_updated
+        update=_on_value_updated_redraw
         )
 
     def execute(self, context):
@@ -159,84 +161,81 @@ class OpGetIdByLabel(bpy.types.Operator):
             max_i = len(classes)
             is_overflowing = False
         for i in range(0, max_i):
-            layout.label(text=classes[i].idname)
+            layout.label(text=classes[i].debug)
         if is_overflowing:
             layout.label(text="...")
 
-# class OpGetIdById(bpy.types.Operator):
-#     bl_idname = "learn_blender_ui.by_id"
-#     bl_label = "Learn ID by ID fragment"
-#     bl_description = "\
-#         By typing in a part of the bl_idname\
-#         you will get a list of ids for the ui elements that match"
-#     bl_options = {'REGISTER'}
-#     label_fragment : bpy.props.StringProperty()
-    
-#     @staticmethod
-#     def _get_classes_by_label(label_fragment:str):
-#         result = []
-#         label_fragment = label_fragment.lower()
-#         print (">>>")
-#         for clsName in dir(bpy.types):
-#             try:
-#                 cls = getattr(bpy.types, clsName)
-#                 label:str = getattr(cls, 'bl_label').lower()
-#                 if label_fragment in label.lower():
-#                     result.append(cls)
-#                     print("{}: {}".format(tName, label))
-#                 # print(t.bl_idname)
-#             except:
-#                 pass
-#         print ("<<<")
+class OpGetIdById(bpy.types.Operator):
+    bl_idname = "learn_blender_ui.by_id"
+    bl_label = "Learn ID by ID fragment"
+    bl_description = "\
+        By typing in a part of the bl_idname\
+        you will get a list of ids for the ui elements that match"
+    bl_options = {'REGISTER'}
 
-#         return result
+    @staticmethod
+    def _get_classes_by_id(id_fragment:str):
+        result = []
+        ui, headers, menus, operators, panels, ui_lists = get_ui_classes()
+        id_fragment = id_fragment.lower()
+        for class_container in ui:
+            if not id_fragment:
+                result.append(class_container)
+                continue
+            
+            if id_fragment in class_container.idname.lower():
+                result.append(class_container)
 
-#     def execute(self, context):
-#         user_input = self.label_fragment
-#         reverse = False
-
-#         classes = self._get_classes_by_label(user_input)
-#         if not len(classes):
-#             bpy.window_manager.report('Info', "No matches found!")
-#             return {'FINISHED'}
+        return result
 
 
+    id_fragment : bpy.props.StringProperty(
+        name="Id fragment",
+        description="Part of the id that the search will be matching against",
+        subtype='NONE',
+        update=_on_value_updated_redraw
+        )
 
-#         suff = re.findall("#+$", user_input)
-#         if user_input and suff:
-#             number = ('%0'+str(len(suff[0]))+'d', len(suff[0]))
-#             real_name = re.sub("#", '', user_input)           
+    def execute(self, context):
+        user_input = self.id_fragment
 
-#             objs = context.selected_objects[::-1] if reverse else context.selected_objects
-#             names_before = [n.name for n in objs]
-#             for c, o in enumerate(objs, start=1):
-#                 o.name = (real_name + (number[0] % c))
-#                 if self.data_flag and o.data is not None:
-#                     o.data.name = (real_name + (number[0] % c))
-#             self.report({'INFO'}, "Renamed {}".format(", ".join(names_before)))
-#             return {'FINISHED'}
+        classes = self._get_classes_by_label(user_input)
+        if not len(classes):
+            self.report({'INFO'}, "No matches found!")
+            return {'FINISHED'}
 
-#         elif user_input:
-#             old_name = context.active_object.name
-#             context.active_object.name = user_input
-#             if self.data_flag and context.active_object.data is not None:
-#                 context.active_object.data.name = user_input
-#             self.report({'INFO'}, "{} renamed to {}".format(old_name, user_input))
-#             return {'FINISHED'}
+        info = ""
+        for class_container in classes:
+            info += class_container.idname + "\n"
+            # self.report({'ERROR'}, info)
+        
+        self._matches = classes
+        return {'FINISHED'}
 
-#         else:
-#             self.report({'INFO'}, "No input, operation cancelled")
-#             return {'CANCELLED'}
+    def invoke(self, context, event):
+        wm = context.window_manager
+        # self.id_fragment = ""
+        return wm.invoke_props_dialog(self)
 
-#     def invoke(self, context, event):
-#         wm = context.window_manager
-#         self.label_fragment = ""
-#         return wm.invoke_props_dialog(self)
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "id_fragment")
 
-#     def draw(self, context):
-#         row = self.layout
-#         row.prop(self, "type", text="New Name")
-#         row.prop(self, "data_flag", text="Rename Data-Block")
+        user_input = self.id_fragment
+        classes = OpGetIdById._get_classes_by_id(user_input)
+
+        if not user_input:
+            return
+
+        is_overflowing = True
+        max_i = 21
+        if max_i > len(classes):
+            max_i = len(classes)
+            is_overflowing = False
+        for i in range(0, max_i):
+            layout.label(text=classes[i].debug)
+        if is_overflowing:
+            layout.label(text="...")
 
 
 # ------------------------------------------------------------------------
@@ -245,6 +244,7 @@ class OpGetIdByLabel(bpy.types.Operator):
 
 classes = [
     OpGetIdByLabel,
+    OpGetIdById,
 ]
 
 addon_keymaps = []
