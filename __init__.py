@@ -150,11 +150,18 @@ class OpGetIdByLabel(bpy.types.Operator):
         user_input = self.label_fragment
         classes = OpGetIdByLabel._get_classes_by_label(user_input)
 
-        max_i = 31
+        if not user_input:
+            return
+
+        is_overflowing = True
+        max_i = 21
         if max_i > len(classes):
             max_i = len(classes)
+            is_overflowing = False
         for i in range(0, max_i):
             layout.label(text=classes[i].idname)
+        if is_overflowing:
+            layout.label(text="...")
 
 # class OpGetIdById(bpy.types.Operator):
 #     bl_idname = "learn_blender_ui.by_id"
