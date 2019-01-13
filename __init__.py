@@ -80,14 +80,19 @@ class ClassContainer:
         self.debug = "{}: {}".format(self.idname, self.label)
 
 def _on_value_updated_redraw(prop : bpy.types.Property, context):
-    # user_input:str = self.label_fragment
-    # classes = OpGetIdByLabel._get_classes_by_label(user_input)
-        # self.report({'ERROR'}, info)
-
     context.area.tag_redraw()
-    # for a in context.screen.areas:
-    #     a.tag_redraw()
-    
+
+def _show_data(layout:bpy.types.UILayout, context, data=[]):
+    is_overflowing = True
+    max_i = 21
+    if max_i > len(data):
+        max_i = len(data)
+        is_overflowing = False
+    for i in range(0, max_i):
+        layout.label(text=data[i].debug)
+    if is_overflowing:
+        layout.label(text="...")
+
 class OpGetIdByLabel(bpy.types.Operator):
     bl_idname = "learn_blender_ui.by_label"
     bl_label = "Learn ID by Label fragment"
@@ -108,11 +113,6 @@ class OpGetIdByLabel(bpy.types.Operator):
             
             if label_fragment in class_container.label.lower():
                 result.append(class_container)
-        
-        # print (">>>")
-        # for class_container in result:
-        #     print("{}: {}".format(class_container.idname, class_container.label))
-        # print ("<<<")
 
         return result
 
@@ -125,24 +125,10 @@ class OpGetIdByLabel(bpy.types.Operator):
         )
 
     def execute(self, context):
-        user_input = self.label_fragment
-
-        classes = self._get_classes_by_label(user_input)
-        if not len(classes):
-            self.report({'INFO'}, "No matches found!")
-            return {'FINISHED'}
-
-        info = ""
-        for class_container in classes:
-            info += class_container.idname + "\n"
-            # self.report({'ERROR'}, info)
-        
-        self._matches = classes
         return {'FINISHED'}
 
     def invoke(self, context, event):
         wm = context.window_manager
-        # self.label_fragment = ""
         return wm.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -154,16 +140,10 @@ class OpGetIdByLabel(bpy.types.Operator):
 
         if not user_input:
             return
+        
+        _show_data(layout, context, classes)
 
-        is_overflowing = True
-        max_i = 21
-        if max_i > len(classes):
-            max_i = len(classes)
-            is_overflowing = False
-        for i in range(0, max_i):
-            layout.label(text=classes[i].debug)
-        if is_overflowing:
-            layout.label(text="...")
+        
 
 class OpGetIdById(bpy.types.Operator):
     bl_idname = "learn_blender_ui.by_id"
@@ -197,24 +177,10 @@ class OpGetIdById(bpy.types.Operator):
         )
 
     def execute(self, context):
-        user_input = self.id_fragment
-
-        classes = self._get_classes_by_label(user_input)
-        if not len(classes):
-            self.report({'INFO'}, "No matches found!")
-            return {'FINISHED'}
-
-        info = ""
-        for class_container in classes:
-            info += class_container.idname + "\n"
-            # self.report({'ERROR'}, info)
-        
-        self._matches = classes
         return {'FINISHED'}
 
     def invoke(self, context, event):
         wm = context.window_manager
-        # self.id_fragment = ""
         return wm.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -227,15 +193,7 @@ class OpGetIdById(bpy.types.Operator):
         if not user_input:
             return
 
-        is_overflowing = True
-        max_i = 21
-        if max_i > len(classes):
-            max_i = len(classes)
-            is_overflowing = False
-        for i in range(0, max_i):
-            layout.label(text=classes[i].debug)
-        if is_overflowing:
-            layout.label(text="...")
+        _show_data(layout, context, classes)
 
 
 # ------------------------------------------------------------------------
@@ -255,26 +213,12 @@ def register():
     addon_keymaps.clear()
     for cls in classes:
         register_class(cls)
-    # bpy.utils.register_module(__name__)
-
-    # # handle the keymap
-    # wm = bpy.context.window_manager
-    # kc = wm.keyconfigs.addon
-    # if kc:
-    #     km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
-    #     kmi = km.keymap_items.new(ViewportRenameOperator.bl_idname, type='R', value='PRESS', ctrl=True)
-    #     addon_keymaps.append((km, kmi))
 
 def unregister():
     from bpy.utils import unregister_class
 
-    # for km, kmi in addon_keymaps:
-    #     km.keymap_items.remove(kmi)
-    # addon_keymaps.clear()
-
     for cls in classes:
         unregister_class(cls)
-    # bpy.utils.unregister_module(__name__)
 
-# if __name__ == "__main__":
-#     register()
+if __name__ == "__main__":
+    register()
